@@ -14,10 +14,10 @@ handle_error() {
 # Set up error trap
 trap 'handle_error ${LINENO} $?' ERR
 
-# Script to install Docker and run PGDuckDB with MotherDuck on Amazon Linux EC2
+# Script to install Docker and run PGDuckDB with MotherDuck on Amazon Linux 2023 EC2
 # Usage: POSTGRES_PASSWORD=your_secure_password MOTHERDUCK_TOKEN=your_md_token ./setup_pgduckdb.sh
 
-echo "Starting setup for PGDuckDB with MotherDuck on Ubuntu..."
+echo "Starting setup for PGDuckDB with MotherDuck on Amazon Linux..."
 
 # Check if required environment variables are set
 if [ -z "$POSTGRES_PASSWORD" ]; then
@@ -34,7 +34,7 @@ fi
 
 # Update package lists - continue even if there are errors with some repositories
 echo "Updating package lists..."
-sudo yum update -y || true
+sudo dnf update -y || true
 
 # Check if Docker is already installed
 if command -v docker &>/dev/null; then
@@ -42,9 +42,8 @@ if command -v docker &>/dev/null; then
 else
   # Install prerequisites
   echo "Installing prerequisites..."
-  sudo yum install -y \
-    amazon-linux-extras \
-    yum-utils \
+  sudo dnf install -y \
+    dnf-utils \
     device-mapper-persistent-data \
     lvm2 \
     ca-certificates \
@@ -52,11 +51,11 @@ else
 
   # Set up the Docker repository
   echo "Setting up Docker repository..."
-  sudo amazon-linux-extras install docker -y || sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+  sudo dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
   # Install Docker Engine
   echo "Installing Docker Engine..."
-  sudo yum install -y docker-ce docker-ce-cli containerd.io
+  sudo dnf install -y docker-ce docker-ce-cli containerd.io
 fi
 
 # Start Docker service
