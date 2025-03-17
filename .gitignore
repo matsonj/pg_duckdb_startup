@@ -1,0 +1,17 @@
+# Ignore environment variables and credentials
+.env
+
+# Ignore Docker volumes and data
+pgduckdb_data/
+
+# Ignore logs
+*.log
+
+# Ignore system files
+.DS_Store
+.idea/
+.vscode/
+
+# Ignore temp files
+*.tmp
+*~
