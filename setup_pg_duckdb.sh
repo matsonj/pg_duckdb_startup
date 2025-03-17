@@ -42,12 +42,12 @@ if command -v docker &>/dev/null; then
 else
   # Install prerequisites
   echo "Installing prerequisites..."
-  sudo dnf install -y \
+  # Use --allowerasing to handle curl package conflicts
+  sudo dnf install -y --allowerasing \
     dnf-utils \
     device-mapper-persistent-data \
     lvm2 \
-    ca-certificates \
-    curl
+    ca-certificates
 
   # Set up the Docker repository
   echo "Setting up Docker repository..."
@@ -55,7 +55,7 @@ else
 
   # Install Docker Engine
   echo "Installing Docker Engine..."
-  sudo dnf install -y docker-ce docker-ce-cli containerd.io
+  sudo dnf install -y --allowerasing docker-ce docker-ce-cli containerd.io
 fi
 
 # Start Docker service
