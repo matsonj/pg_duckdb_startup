@@ -113,9 +113,14 @@ sudo systemctl enable docker || sudo chkconfig docker on
 echo "Adding current user to docker group..."
 sudo usermod -aG docker "$USER"
 
-# Create data directory if it doesn't exist
-echo "Creating data directory..."
-mkdir -p ~/pgduckdb_data
+# Create a new data directory for PostgreSQL 17
+echo "Creating new data directory for PostgreSQL 17..."
+mkdir -p ~/pgduckdb_data_v17
+
+# Fix permissions on the data directory
+echo "Setting correct permissions on data directory..."
+sudo chown -R 999:999 ~/pgduckdb_data_v17  # 999 is the standard UID for postgres user in Docker
+sudo chmod 700 ~/pgduckdb_data_v17
 
 # Check architecture
 ARCH=$(uname -m)
@@ -136,7 +141,7 @@ fi
 
 # Pull the Docker image
 echo "Pulling Docker image..."
-sudo docker pull ankane/pgvector:latest
+sudo docker pull pgduckdb/pgduckdb:17-main
 
 # Check available system memory
 echo "Checking system memory..."
@@ -155,36 +160,52 @@ sudo docker run -d \
   -p 5432:5432 \
   -e POSTGRES_PASSWORD="$POSTGRES_PASSWORD" \
   -e MOTHERDUCK_TOKEN="$MOTHERDUCK_TOKEN" \
-  -v ~/pgduckdb_data:/var/lib/postgresql/data \
+  -v ~/pgduckdb_data_v17:/var/lib/postgresql/data \
   --restart unless-stopped \
   --memory=${DOCKER_MEM_LIMIT}m \
-  ankane/pgvector:latest
+  pgduckdb/pgduckdb:17-main
 
 # Wait for PostgreSQL to start
 echo "Waiting for PostgreSQL to start..."
 sleep 10
 
-# Create the extension
-echo "Creating DuckDB extension..."
+# Configure PostgreSQL
+echo "Configuring PostgreSQL and DuckDB..."
+
+# Append settings to the main PostgreSQL configuration file
+echo "Appending settings to PostgreSQL configuration file..."
+sudo docker exec -i pgduckdb bash -c "cat >> /var/lib/postgresql/data/postgresql.conf << 'EOT'
+
+# DuckDB integration settings
+duckdb.motherduck_enabled = true
+
+# Memory configuration optimized for AWS m7g.xlarge with more conservative settings
+work_mem = '32MB'                    # Per-operation memory for sorts, joins, etc.
+maintenance_work_mem = '512MB'       # Memory for maintenance operations
+shared_buffers = '2GB'               # ~12.5% of RAM for shared buffer cache
+effective_cache_size = '6GB'         # Conservative estimate of OS cache
+max_connections = 100                # Reduced maximum concurrent connections
+
+# Detailed query logging
+log_min_duration_statement = 0        # Log all queries
+log_statement = 'all'                 # Log all SQL statements
+log_duration = on                     # Log duration of each SQL statement
+log_line_prefix = '%t [%p]: [%l-1] db=%d,user=%u ' # Prefix format
+EOT"
+
+# Restart PostgreSQL to apply all configuration settings
+echo "Restarting PostgreSQL container to apply all configuration settings..."
+sudo docker restart pgduckdb
+
+# Wait for PostgreSQL to restart
+echo "Waiting for PostgreSQL container to restart..."
+sleep 10
+
+# Verify PostgreSQL is running with new settings
+echo "Verifying PostgreSQL configuration..."
 sudo docker exec -i pgduckdb psql -U postgres << EOF
--- Create DuckDB extension
-CREATE EXTENSION IF NOT EXISTS duckdb;
-
--- Memory configuration optimized for AWS m7g.xlarge with more conservative settings
-ALTER SYSTEM SET work_mem = '32MB';                    -- Per-operation memory for sorts, joins, etc.
-ALTER SYSTEM SET maintenance_work_mem = '512MB';       -- Memory for maintenance operations
-ALTER SYSTEM SET shared_buffers = '2GB';               -- ~12.5% of RAM for shared buffer cache
-ALTER SYSTEM SET effective_cache_size = '6GB';         -- Conservative estimate of OS cache
-ALTER SYSTEM SET max_connections = '100';              -- Reduced maximum concurrent connections
-
--- Detailed query logging
-ALTER SYSTEM SET log_min_duration_statement = '0';     -- Log all queries
-ALTER SYSTEM SET log_statement = 'all';                -- Log all SQL statements
-ALTER SYSTEM SET log_duration = 'on';                  -- Log duration of each SQL statement
-ALTER SYSTEM SET log_line_prefix = '%t [%p]: [%l-1] db=%d,user=%u '; -- Prefix format
-
--- Apply changes
-SELECT pg_reload_conf();
+-- Check if PostgreSQL is running
+SELECT version();
 EOF
 
 # Create monitoring script
