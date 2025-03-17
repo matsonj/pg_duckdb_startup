@@ -1,7 +1,7 @@
 # Setting up PGDuckDB on AWS m7g.xlarge EC2 Instance
 
 ## Overview
-This repository contains a script to set up PostgreSQL with DuckDB integration (PGDuckDB) on an AWS m7g.xlarge instance (ARM-based Graviton3, 16GB RAM, 4 vCPUs) in the us-east-1b region. The script installs Docker, configures PostgreSQL with optimized settings, and sets up detailed query logging.
+This repository contains a script to set up PostgreSQL with DuckDB integration (PGDuckDB) on an AWS m7g.xlarge instance (ARM-based Graviton3, 16GB RAM, 4 vCPUs) in the us-east-1b region. The script installs Docker on Amazon Linux, configures PostgreSQL with optimized settings, and sets up detailed query logging.
 
 ## Installation
 

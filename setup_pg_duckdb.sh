@@ -14,7 +14,7 @@ handle_error() {
 # Set up error trap
 trap 'handle_error ${LINENO} $?' ERR
 
-# Script to install Docker and run PGDuckDB with MotherDuck on Ubuntu
+# Script to install Docker and run PGDuckDB with MotherDuck on Amazon Linux EC2
 # Usage: POSTGRES_PASSWORD=your_secure_password MOTHERDUCK_TOKEN=your_md_token ./setup_pgduckdb.sh
 
 echo "Starting setup for PGDuckDB with MotherDuck on Ubuntu..."
@@ -34,7 +34,7 @@ fi
 
 # Update package lists - continue even if there are errors with some repositories
 echo "Updating package lists..."
-sudo apt-get update -y || true
+sudo yum update -y || true
 
 # Check if Docker is already installed
 if command -v docker &>/dev/null; then
@@ -42,36 +42,27 @@ if command -v docker &>/dev/null; then
 else
   # Install prerequisites
   echo "Installing prerequisites..."
-  sudo apt-get install -y \
-    apt-transport-https \
+  sudo yum install -y \
+    amazon-linux-extras \
+    yum-utils \
+    device-mapper-persistent-data \
+    lvm2 \
     ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-
-  # Add Docker's official GPG key
-  echo "Adding Docker's GPG key..."
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+    curl
 
   # Set up the Docker repository
   echo "Setting up Docker repository..."
-  echo \
-    "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list >/dev/null
-
-  # Update package lists again with Docker repository
-  echo "Updating package lists with Docker repository..."
-  sudo apt-get update -y || true
+  sudo amazon-linux-extras install docker -y || sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
 
   # Install Docker Engine
   echo "Installing Docker Engine..."
-  sudo apt-get install -y docker-ce docker-ce-cli containerd.io
+  sudo yum install -y docker-ce docker-ce-cli containerd.io
 fi
 
 # Start Docker service
 echo "Starting Docker service..."
-sudo systemctl start docker
-sudo systemctl enable docker
+sudo systemctl start docker || sudo service docker start
+sudo systemctl enable docker || sudo chkconfig docker on
 
 # Add current user to docker group to avoid using sudo with docker commands
 echo "Adding current user to docker group..."
